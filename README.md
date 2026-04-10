@@ -4,9 +4,9 @@ A simple drag-and-drop tool for extracting and repacking KOG `.kom` archive file
 
 ## Usage
 
-**Extract** - Drag a `.kom` file onto the window. Contents are extracted to a folder with the same name next to the file.
+**Extract** — Drag a `.kom` file onto the window. Contents are extracted to a folder with the same name next to the file.
 
-**Repack** - Drag a folder onto the window. It is repacked into a `.kom` file with the same name, overwriting the original if it exists.
+**Repack** — Drag a folder onto the window. It is repacked into a `.kom` file with the same name, overwriting the original if it exists.
 
 ## Format Support
 

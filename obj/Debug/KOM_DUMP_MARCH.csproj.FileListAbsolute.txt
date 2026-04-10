@@ -1,0 +1,10 @@
+C:\Users\Administrator\Documents\KOM_DUMP_MARCH\obj\Debug\KOM_DUMP_MARCH.csproj.AssemblyReference.cache
+C:\Users\Administrator\Documents\KOM_DUMP_MARCH\obj\Debug\KOM_DUMP_MARCH.csproj.CoreCompileInputs.cache
+C:\Users\Administrator\Documents\KOM_DUMP_MARCH\bin\Debug\SuperKOM.exe.config
+C:\Users\Administrator\Documents\KOM_DUMP_MARCH\bin\Debug\SuperKOM.exe
+C:\Users\Administrator\Documents\KOM_DUMP_MARCH\bin\Debug\SuperKOM.pdb
+C:\Users\Administrator\Documents\KOM_DUMP_MARCH\obj\Debug\KOM_DUMP_MARCH.MainForm.resources
+C:\Users\Administrator\Documents\KOM_DUMP_MARCH\obj\Debug\KOM_DUMP_MARCH.csproj.GenerateResource.cache
+C:\Users\Administrator\Documents\KOM_DUMP_MARCH\obj\Debug\SuperKOM.exe
+C:\Users\Administrator\Documents\KOM_DUMP_MARCH\obj\Debug\SuperKOM.pdb
+C:\Users\Administrator\Documents\KOM_DUMP_MARCH\obj\Debug\SuperKOM.exe.config

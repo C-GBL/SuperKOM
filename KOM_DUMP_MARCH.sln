@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36603.0 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KOM_DUMP_MARCH", "KOM_DUMP_MARCH.csproj", "{7A3C1F84-D2E6-4B90-AF12-3E8D94567B01}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7A3C1F84-D2E6-4B90-AF12-3E8D94567B01}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7A3C1F84-D2E6-4B90-AF12-3E8D94567B01}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7A3C1F84-D2E6-4B90-AF12-3E8D94567B01}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7A3C1F84-D2E6-4B90-AF12-3E8D94567B01}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {92CCBED9-D032-43C2-80C8-4CA22C922FD6}
+	EndGlobalSection
+EndGlobal
