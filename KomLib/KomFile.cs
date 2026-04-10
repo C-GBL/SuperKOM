@@ -117,6 +117,16 @@ namespace KOM_DUMP_MARCH.KomLib
             uint headerSize = br.ReadUInt32();
 
             byte[] headerBytes = br.ReadBytes((int)headerSize);
+
+            // Detect whether the header is plain XML or
+            // Blowfish-encrypted (Kom2/patcher format). This determines whether file
+            // data also needs Blowfish decryption.
+
+            // march 2014 compatiable
+            bool headerWasEncrypted = !(headerBytes.Length >= 5 &&
+                headerBytes[0] == '<' && headerBytes[1] == '?' &&
+                headerBytes[2] == 'x' && headerBytes[3] == 'm' && headerBytes[4] == 'l');
+
             DecryptHeader(headerBytes);
 
             // Null-terminate the xml string properly
@@ -142,8 +152,12 @@ namespace KOM_DUMP_MARCH.KomLib
                 byte[] compData = br.ReadBytes((int)compSize);
                 dataOffset += compSize;
 
-                // Decrypt if needed
-                if (algo == 1)
+                // Algorithm=2: XOR-CRC decrypt then zlib
+                // Algorithm=1 + encrypted header: Blowfish ECB then zlib (Kom2/patcher format)
+                // Everything else: plain zlib
+                if (algo == 2)
+                    XorCrcDecrypt(compData, (int)compSize, name);
+                else if (headerWasEncrypted && algo == 1)
                     BlowfishDecryptOrEncrypt(compData, (int)compSize, encrypt: false);
 
                 // Decompress
@@ -193,7 +207,129 @@ namespace KOM_DUMP_MARCH.KomLib
             }
         }
 
-        //  Crypto helpers 
+        //  Algorithm=2 XOR-CRC decrypt (KTDXLIB KTDXCommonFunc.h XORCRCDecrypt)
+
+        // CRC-32 table (IEEE 802.3 / PKZip polynomial)
+        private static readonly uint[] _crc32Table = BuildCrc32Table();
+        private static uint[] BuildCrc32Table()
+        {
+            const uint poly = 0x04C11DB7;
+            var table = new uint[256];
+            for (int i = 0; i < 256; i++)
+            {
+                uint entry = Reflect((uint)i, 8) << 24;
+                for (int j = 0; j < 8; j++)
+                    entry = (entry & 0x80000000u) != 0
+                        ? (entry << 1) ^ poly
+                        : entry << 1;
+                table[i] = Reflect(entry, 32);
+            }
+            return table;
+        }
+        private static uint Reflect(uint v, int bits)
+        {
+            uint r = 0;
+            for (int i = 1; i <= bits; i++) { if ((v & 1) != 0) r |= 1u << (bits - i); v >>= 1; }
+            return r;
+        }
+
+        // XOR key constants from KTDXCommonFunc.h
+        private static readonly uint[] _xorKeys =
+        {
+            0xcc3d4ffb, // XOR_KEY30
+            0x593cdeaf, // XOR_KEY42
+            0xcf4235de, // XOR_KEY14
+            0xde34bd78, // XOR_KEY22
+            0x52b34a75, // XOR_KEY40
+        };
+        private const uint XOR_KEY49 = 0x38d2dfa4;
+
+        private static byte[] MakeXorKeyBytes()
+        {
+            var key = new byte[20];
+            for (int i = 0; i < 5; i++)
+            {
+                uint v = _xorKeys[i] ^ XOR_KEY49;
+                key[i * 4]     = (byte)v;
+                key[i * 4 + 1] = (byte)(v >> 8);
+                key[i * 4 + 2] = (byte)(v >> 16);
+                key[i * 4 + 3] = (byte)(v >> 24);
+            }
+            return key;
+        }
+
+        // Mirrors CalculateWithoutEncrypt — advances CRC over prefix bytes
+        private static uint CrcWithoutEncrypt(byte[] buf, byte[] xorKey, uint crc, out int outIdx)
+        {
+            int idx = 0;
+            foreach (byte b in buf)
+            {
+                crc = (crc >> 8) ^ _crc32Table[(crc & 0xFF) ^ b ^ xorKey[idx]];
+                idx = (idx + 1) % xorKey.Length;
+            }
+            outIdx = idx;
+            return crc;
+        }
+
+        // Mirrors CalculateAndDecrypt — decrypts data in-place
+        private static void CrcDecrypt(byte[] data, int length, byte[] xorKey, uint crc)
+        {
+            int idx = 0;
+            for (int i = 0; i < length; i++)
+            {
+                uint comp     = (crc & 0xFF) ^ xorKey[idx];
+                uint stored   = (uint)data[i] ^ 0xFF ^ comp;
+                uint encrypted = _crc32Table[stored];
+                data[i] = (byte)((encrypted & 0xFF) ^ comp);
+                crc = (crc >> 8) ^ ((encrypted & 0xFFFFFF00u) | stored);
+                idx = (idx + 1) % xorKey.Length;
+            }
+        }
+
+        // XORCRCDecrypt: decrypts Algorithm=2 file data in-place.
+        // filename = just the basename (no directory), case-insensitive.
+        // compressedSize = number of bytes in data / the buffer being decrypted.
+        private static void XorCrcDecrypt(byte[] data, int compressedSize, string filename)
+        {
+            byte[] xorKey1 = MakeXorKeyBytes();
+
+            // Build prefix: lowercase filename bytes (1 byte per ASCII char) + size bytes
+            string baseName = Path.GetFileName(filename).ToLowerInvariant();
+            var prefix = new System.Collections.Generic.List<byte>(baseName.Length + 4);
+            foreach (char c in baseName)
+            {
+                prefix.Add((byte)(c & 0xFF));
+                if ((c >> 8) != 0) prefix.Add((byte)((c >> 8) & 0xFF));
+            }
+            uint sz = (uint)compressedSize;
+            for (int i = 0; i < 4; i++)
+            {
+                if (sz == 0) break;
+                prefix.Add((byte)(sz & 0xFF));
+                sz >>= 8;
+            }
+
+            // Compute CRC over prefix using the XOR key
+            uint crc = 0xFFFFFFFFu;
+            crc = CrcWithoutEncrypt(prefix.ToArray(), xorKey1, crc, out int byteIdx);
+
+            // Rotate the key left by (byteIdx % 20) bytes
+            int rot = byteIdx % 20;
+            var xorKey = new byte[20];
+            if (rot == 0)
+            {
+                Array.Copy(xorKey1, xorKey, 20);
+            }
+            else
+            {
+                Array.Copy(xorKey1, rot, xorKey, 0, 20 - rot);
+                Array.Copy(xorKey1, 0, xorKey, 20 - rot, rot);
+            }
+
+            CrcDecrypt(data, compressedSize, xorKey, crc);
+        }
+
+        //  Crypto helpers
 
         private static void DecryptHeader(byte[] header)
         {
